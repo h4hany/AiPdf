@@ -1,0 +1,4 @@
+transformers
+pdfplumber
+re
+torch  # Make sure PyTorch is installed for transformers to work
