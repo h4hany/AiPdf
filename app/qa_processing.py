@@ -13,43 +13,6 @@ def find_exact_match(question, pdf_content):
             return line
     return None
 
-# def find_best_answer_or_related_matches(question, pdf_content, confidence_threshold=0.5):
-#     """Find the best answer or related matches for the question."""
-#     content = pdf_content
-#     exact_match = find_exact_match(question, content)
-#     if exact_match:
-#         content = exact_match
-#     chunks = split_into_chunks(content)
-#     best_answer = None
-#     best_score = 0
-#     all_answers = []
-#
-#     for chunk in chunks:
-#         if not chunk.strip():  # Skip empty chunks
-#             continue
-#         try:
-#             result = qa_pipeline(question=question, context=chunk)
-#             print(f"Chunk: {chunk[:200]}...")  # Print the first 200 characters of the chunk
-#             print(f"Answer: {result['answer']}, Score: {result['score']}")  # Print the answer and score
-#             all_answers.append((result["answer"], result["score"], chunk))
-#             if result["score"] > best_score:
-#                 best_answer = result["answer"]
-#                 best_score = result["score"]
-#         except Exception as e:
-#             print(f"Error processing chunk: {e}")
-#
-#     if best_answer and best_score >= confidence_threshold:
-#         return f"Answer: {best_answer} (Confidence: {best_score:.2f})"
-#     else:
-#         # Return related snippets if no confident answer is found
-#         related_matches = [chunk for answer, score, chunk in all_answers if
-#                            score >= 0.05]  # Lower threshold for related matches
-#         if related_matches:
-#             return "Sorry, I couldn't find a confident answer. Here are some related snippets:\n" + "\n\n".join(
-#                 related_matches)
-#         else:
-#             return "Sorry, I couldn't find any relevant information."
-
 
 def find_best_answer_or_related_matches(question, pdf_content, confidence_threshold=0.5, top_n=5):
     """Find the best answer or related matches for the question."""
