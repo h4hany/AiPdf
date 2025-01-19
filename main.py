@@ -1,33 +1,45 @@
-from app.pdf_processing import extract_text_from_pdf, preprocess_text
-from app.qa_processing import find_best_answer_or_related_matches
+import logging
+from src.services.qa_service import QAService
 
 
 def main():
-    print("Welcome to the Generic PDF Question Answering App!")
-    pdf_path = input("Enter the path to your PDF file: ")
+    # Configure logging
+    # logging.basicConfig(level=logging.DEBUG)
+    # logger = logging.getLogger(__name__)
 
-    # Extract and preprocess text from the PDF
-    raw_text = extract_text_from_pdf('app/static/hany_sayed_cv.pdf')
-    if not raw_text:
-        print("Could not extract text from the PDF. Exiting...")
-        return
+    # Initialize QA service
+    qa_service = QAService(enable_ocr=False)
 
-    pdf_content = preprocess_text(raw_text)
-    print("\nPDF loaded and preprocessed successfully. You can now ask questions.")
-    print("Type 'exit' to quit the application.\n")
+    # PDF path
+    pdf_path = "static/Absolent Air Care Group AB_F1ABA1.pdf"
 
-    # Interactive question-answering loop
-    while True:
-        question = input("Your Question: ")
-        if question.lower() == "exit":
-            print("Exiting the application. Goodbye!")
-            break
+    try:
+        # Initialize with PDF
+        qa_service.initialize(pdf_path)
 
-        try:
-            response = find_best_answer_or_related_matches(question, pdf_content)
-            print(response + "\n")
-        except Exception as e:
-            print(f"Error processing the question: {e}\n")
+        # Your questions
+        questions = [
+            "what is company name?",
+            "what is Scope 1 CO2e emissions?",
+            "how many net sales in 2021?",
+            "how many number of employee "
+            # Add more questions here
+        ]
+
+        # Get answers
+        answers = qa_service.get_answers(questions)
+        print('---------------------')
+        # Print results
+        for answer in answers:
+            print(f"Question: {answer['question']}")
+            print(f"Answer: {answer['answer']}")
+            print(f"Confidence: {answer['confidence']:.2f}")
+            print('---------------------')
+
+    except Exception as e:
+        logger.error(f"Error in main: {str(e)}")
+    finally:
+        qa_service.cleanup()
 
 
 if __name__ == "__main__":
