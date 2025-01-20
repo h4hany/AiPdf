@@ -25,3 +25,31 @@ class TextProcessor:
                       flags=re.I)  # Remove irrelevant keywords like 'page', 'question', etc.
         return text
 
+    def split_into_chunks(self, text, max_length=1024, overlap=200):
+        """Split text into overlapping chunks while preserving logical sections."""
+        sections = text.split("\n\n")  # Split by double newlines (paragraphs)
+        chunks = []
+        current_chunk = ""
+
+        for section in sections:
+            # If adding this section would exceed the max_length, finalize the current chunk
+            if len(current_chunk) + len(section) > max_length:
+                if current_chunk.strip():  # Only add non-empty chunks
+                    chunks.append(current_chunk.strip())
+                current_chunk = ""
+
+            # Add the section to the current chunk
+            current_chunk += section + "\n\n"
+
+        # Add the last chunk if it's not empty
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+
+        # Apply overlapping to the chunks
+        overlapping_chunks = []
+        for i in range(0, len(chunks), max_length - overlap):
+            overlapping_chunk = " ".join(chunks[i:i + max_length])
+            if overlapping_chunk.strip():  # Only add non-empty chunks
+                overlapping_chunks.append(overlapping_chunk)
+
+        return overlapping_chunks

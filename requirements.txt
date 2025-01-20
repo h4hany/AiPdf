@@ -1,4 +1,27 @@
-transformers
-pdfplumber
-re
-torch  # Make sure PyTorch is installed for transformers to work
+# PDF Processing
+pdfplumber>=0.7.4
+PyPDF2>=2.0.0
+
+# Data Processing
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Image Processing
+Pillow>=9.0.0
+pytesseract>=0.3.8  # Optional for OCR
+
+# Machine Learning
+torch>=2.0.0
+transformers>=4.30.0
+sentencepiece>=0.1.99
+
+# Utilities
+tqdm>=4.65.0
+PyYAML>=6.0
+python-dateutil>=2.8.2
+
+# Optional: for better performance with transformers
+accelerate>=0.20.0
+
+# Added from the code block
+opencv-python

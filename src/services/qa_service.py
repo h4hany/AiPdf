@@ -36,7 +36,6 @@ class QAService:
         self.image_content = ""
         self.parsed_tables = []  # List of lists of TableRow
         # self.qa_model = QAModel()
-        self.combined_content = ""
 
     def initialize(self, pdf_path: str) -> None:
         """Initialize the service with a PDF file"""
@@ -49,15 +48,9 @@ class QAService:
             # self.logger.debug(f"Extracted text length: {len(self.text_content)}")
 
             # self.logger.debug("Extracting table content...")
-            # self.table_content = self.pdf_extractor.extract_tables()
+            self.table_content = self.pdf_extractor.extract_tables()
+            self.image_content = self.pdf_extractor.extract_images()
             # self.logger.debug(f"Extracted table length: {len(self.table_content)}")
-
-            # Combine content for processing
-            self.combined_content = f"{self.text_content}\n\n{self.table_content}"
-            # self.logger.debug(f"Combined content length: {len(self.combined_content)}")
-
-            # Log first 500 characters of content for debugging
-            # self.logger.debug(f"Content preview: {self.combined_content[:500]}...")
 
         except Exception as e:
             self.logger.error(f"Error initializing service: {str(e)}")
@@ -68,15 +61,16 @@ class QAService:
         self.logger.debug(f"Processing {len(questions)} questions")
         answers = []
         for question in questions:
-            answer = self.find_best_answer_or_related_matches(question)
+            answer = self.find_answer(question)
             answers.append({
                 "question": question,
                 "answer": answer["answer"],
-                "confidence": answer["confidence"]
+                "confidence": answer["confidence"],
+                "context_type": answer["context_type"]
             })
         return answers
 
-    def find_exact_match(self, question: str, content: str) -> str:
+    def find_exact_match(self, question: str, content: str) -> str | None:
         """Search for an exact match of the question in the text"""
         lines = content.split("\n")
         for line in lines:
@@ -84,53 +78,41 @@ class QAService:
                 return line
         return None
 
-    def split_into_chunks(self, text, max_length=1024, overlap=200):
-        """Split text into overlapping chunks while preserving logical sections."""
-        sections = text.split("\n\n")  # Split by double newlines (paragraphs)
-        chunks = []
-        current_chunk = ""
+    def find_answer(self, question, confidence_threshold: float = 0.5):
+        answer = self.find_best_answer_or_related_matches(question, self.table_content, "table")
+        if not answer["is_found"]:
+            answer = self.find_best_answer_or_related_matches(question, self.image_content, "image")
+        elif not answer["is_found"]:
+            answer = self.find_best_answer_or_related_matches(question, self.text_content, "text")
+        # return answer
+        # answer = self.find_best_answer_or_related_matches(question, self.text_content, "text")
+        # answer = self.find_best_answer_or_related_matches(question, self.image_content, "image")
+        # answer = self.find_best_answer_or_related_matches(question, self.table_content, "table")
+        return answer
 
-        for section in sections:
-            # If adding this section would exceed the max_length, finalize the current chunk
-            if len(current_chunk) + len(section) > max_length:
-                if current_chunk.strip():  # Only add non-empty chunks
-                    chunks.append(current_chunk.strip())
-                current_chunk = ""
 
-            # Add the section to the current chunk
-            current_chunk += section + "\n\n"
 
-        # Add the last chunk if it's not empty
-        if current_chunk.strip():
-            chunks.append(current_chunk.strip())
-
-        # Apply overlapping to the chunks
-        overlapping_chunks = []
-        for i in range(0, len(chunks), max_length - overlap):
-            overlapping_chunk = " ".join(chunks[i:i + max_length])
-            if overlapping_chunk.strip():  # Only add non-empty chunks
-                overlapping_chunks.append(overlapping_chunk)
-
-        return overlapping_chunks
-
-    def find_best_answer_or_related_matches(self, question: str, confidence_threshold: float = 0.5):
+    def find_best_answer_or_related_matches(self, question: str, context: str, context_type: str = "",
+                                            confidence_threshold: float = 0.5):
         """Get answer for a question from the content"""
         try:
             self.logger.debug(f"Processing question: {question}")
 
-            if not self.combined_content:
+            if not context:
                 self.logger.warning("No content available for processing")
                 return {
                     "answer": "No content loaded",
-                    "confidence": 0.0
+                    "confidence": 0.0,
+                    "context_type": context_type,
+                    "is_found": False
                 }
 
-            content = self.combined_content
+            content = context
             exact_match = self.find_exact_match(question, content)
             if exact_match:
                 content = exact_match  # Use the content with the exact match
 
-            chunks = self.split_into_chunks(content)
+            chunks = self.text_processor.split_into_chunks(content)
             best_answer = None
             best_score = 0
             all_answers = []
@@ -156,7 +138,10 @@ class QAService:
             if best_answer and best_score >= confidence_threshold:
                 return {
                     "answer": best_answer,
-                    "confidence": best_score
+                    "confidence": best_score,
+                    "context_type": context_type,
+                    "is_found": True
+
                 }
             else:
                 # If no confident answer is found, return the top 5 related answers
@@ -172,14 +157,19 @@ class QAService:
                 else:
                     return {
                         "answer": "No answer found",
-                        "confidence": 0.0
+                        "confidence": 0.0,
+                        "context_type": context_type,
+                        "is_found": False
                     }
 
         except Exception as e:
             self.logger.error(f"Error in get_answer: {str(e)}")
             return {
                 "answer": "Error processing question",
-                "confidence": 0.0
+                "confidence": 0.0,
+                "context_type": context_type,
+                "is_found": False
+
             }
 
     def cleanup(self):
